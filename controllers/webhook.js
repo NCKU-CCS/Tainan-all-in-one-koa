@@ -19,20 +19,24 @@ let getSenderInfo = async(senderId) => {
 
 let determineStatus = async(event) => {
   let userStatus = await global.redis.get(`${event.sender.id}-status`);
-  if(userStatus === 'store') {
+  if(userStatus === null) {
+    global.redis.set(`${event.sender.id}-status`, 'init');
+  } if(userStatus === 'store') {
     global.redis.set(`${event.sender.id}-status`, `store-${event.message.text}`);
     let responseStr = '請傳送你現在的位置';
     await sendTextMessage(event.sender.id, responseStr);
+    return;
   } else if(userStatus.includes('store')) {
     let lnglat = locationStatus.split('-')[1].split(',');
     let coordinates = {long: lnglat[0], lat: lnglat[1]};
     let storeStr = await features.nearbyStore(coordinates, targetKeyword);
     await sendTextMessage(event.sender.id, storeStr);
     global.redis.set(`${event.sender.id}-status`, 'init');
-  } else {
-    let featureType = determineFeature('message', event.message.text);
-    await responseFeature(featureType, event);
+    return;
   }
+
+  let featureType = determineFeature('message', event.message.text);
+  await responseFeature(featureType, event);
   return;
 };
 
